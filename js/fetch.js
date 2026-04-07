@@ -1,9 +1,8 @@
+import { getPlayerKey, isPlayerFavorite, updateActivePlayers } from './favorites.js';
+import { checkPendingSearch, isSearching, searchPlayers } from './search.js';
 import { setServerInfo, setTitle } from './server.js';
+import { API_BASE_URL, DEFAULT_HEADERS, PROXIES } from './utils/constants.js';
 import { getDiscordId, getSteamId } from './utils/user.js';
-import { isSearching, searchPlayers, checkPendingSearch } from './search.js';
-import { API_BASE_URL, DEFAULT_HEADERS } from './utils/constants.js';
-import { updateActivePlayers, isPlayerFavorite } from './favorites.js';
-import { getPlayerKey } from './favorites.js'; // Ajouté pour générer la clé stable
 
 const refreshButton = document.querySelector('#refresh-button');
 const loader = document.querySelector('#loader');
@@ -15,6 +14,63 @@ let fetcher;
 let seconds = 30;
 
 export const getPlayers = () => currentPlayers;
+
+async function retryFetch(url, options = {}) {
+	const {
+		proxyList = PROXIES,
+		retriesPerProxy = 1,
+		timeout = 3000,
+		backoff = 2,
+		retryOn = [429, 500, 502, 503, 504],
+	} = options;
+
+	// If no proxy, fallback to direct request
+	const targets = proxyList.length ? proxyList : [null];
+
+	for (let i = 0; i < targets.length; i++) {
+		const proxy = targets[i];
+
+		for (let attempt = 0; attempt <= retriesPerProxy; attempt++) {
+			const controller = new AbortController();
+			const timer = setTimeout(() => controller.abort(), timeout);
+
+			const finalUrl = proxy ? proxy + url : url;
+
+			try {
+				const response = await fetch(finalUrl, {
+					...options,
+					signal: controller.signal,
+				});
+
+				clearTimeout(timer);
+
+				if (response.ok) {
+					return response;
+				}
+
+				if (!retryOn.includes(response.status)) {
+					throw new Error(`Non-retryable status: ${response.status}`);
+				}
+
+				throw new Error(`Retryable status: ${response.status}`);
+			} catch (err) {
+				clearTimeout(timer);
+
+				const isLastAttempt = i === targets.length - 1 && attempt === retriesPerProxy;
+
+				if (isLastAttempt) {
+					throw err;
+				}
+
+				const delay = timeout * Math.pow(backoff, attempt);
+
+				console.warn(`Proxy ${proxy || 'direct'} failed (attempt ${attempt + 1}). Retrying in ${delay}ms...`);
+
+				await new Promise((res) => setTimeout(res, delay));
+			}
+		}
+	}
+}
 
 export const fetchServer = (serverId) => {
 	try {
@@ -32,7 +88,7 @@ export const fetchServer = (serverId) => {
 		const url = `${API_BASE_URL}/servers/single/${serverId}`;
 		console.info(`Fetching server info`, serverId, url);
 
-		fetch(url, { headers: DEFAULT_HEADERS })
+		retryFetch(url, { headers: DEFAULT_HEADERS })
 			.then(handleResponse)
 			.then((json) => {
 				setServerInfo(serverId, json.Data);
@@ -70,7 +126,7 @@ const startFetcher = (serverId) => {
 
 const fetchPlayers = (url, playersFetch = false) => {
 	console.info('Fetching players with method:', playersFetch ? 'players.json' : 'normal', url);
-	fetch(url, { headers: DEFAULT_HEADERS })
+	retryFetch(url, { headers: DEFAULT_HEADERS })
 		.then(handleResponse)
 		.then((json) => {
 			let players = playersFetch ? json : json.Data.players;
