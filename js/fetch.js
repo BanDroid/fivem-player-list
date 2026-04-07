@@ -7,11 +7,8 @@ import { getDiscordId, getSteamId } from './utils/user.js';
 const refreshButton = document.querySelector('#refresh-button');
 const loader = document.querySelector('#loader');
 const table = document.querySelector('table');
-const refreshTimer = document.querySelector('#refresh-timer');
 
 let currentPlayers;
-let fetcher;
-let seconds = 30;
 
 export const getPlayers = () => currentPlayers;
 
@@ -80,7 +77,6 @@ export const fetchServer = (serverId) => {
 		}
 
 		setTitle('Loading server data from FiveM API...');
-		seconds = 30;
 
 		showLoader(true);
 
@@ -95,7 +91,6 @@ export const fetchServer = (serverId) => {
 				let playersFetch = false; //Todo
 				let url = `${API_BASE_URL}/servers/single/${serverId}`;
 				fetchPlayers(url, playersFetch);
-				startFetcher(serverId);
 				showNotification('Server data loaded successfully', 'success');
 			})
 			.catch((error) => {
@@ -109,19 +104,6 @@ export const fetchServer = (serverId) => {
 		showNotification('An unexpected error occurred', 'error');
 		showLoader(false);
 	}
-};
-
-const startFetcher = (serverId) => {
-	console.log(`Starting fetcher at ${seconds} seconds`);
-	if (fetcher) clearInterval(fetcher);
-	fetcher = setInterval(() => {
-		refreshTimer.textContent = seconds + 's';
-		if (seconds < 1) {
-			clearInterval(fetcher);
-			fetchServer(serverId);
-		}
-		seconds--;
-	}, 1000);
 };
 
 const fetchPlayers = (url, playersFetch = false) => {
