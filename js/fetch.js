@@ -13,7 +13,7 @@ let currentPlayers;
 export const getPlayers = () => currentPlayers;
 
 async function retryFetch(url, options = {}) {
-	const { proxyList = PROXIES, retriesPerProxy = 1, timeout = 3000, backoff = 2 } = options;
+	const { proxyList = PROXIES, retriesPerProxy = 1, timeout = 5000, backoff = 2 } = options;
 
 	// If no proxy, fallback to direct request
 	const targets = proxyList.length ? proxyList : [null];
