@@ -44,17 +44,25 @@ async function retryFetch(url, options = {}) {
 			} catch (err) {
 				clearTimeout(timer);
 
-				const isLastAttempt = i === targets.length - 1 && attempt === retriesPerProxy;
+				const isLastAttemptForProxy = attempt === retriesPerProxy;
+				const isLastProxy = i === targets.length - 1;
+				const isLastOverall = isLastProxy && isLastAttemptForProxy;
 
-				if (isLastAttempt) {
+				if (isLastOverall) {
 					throw err;
 				}
 
-				const delay = timeout * Math.pow(backoff, attempt);
+				// ✅ Only delay if retrying SAME proxy
+				if (!isLastAttemptForProxy) {
+					const delay = timeout * Math.pow(backoff, attempt);
 
-				console.warn(`Proxy ${proxy || 'direct'} failed (attempt ${attempt + 1}). Retrying in ${delay}ms...`);
+					console.warn(`Proxy ${proxy || 'direct'} failed (attempt ${attempt + 1}). Retrying in ${delay}ms...`);
 
-				await new Promise((res) => setTimeout(res, delay));
+					await new Promise((res) => setTimeout(res, delay));
+				} else {
+					// Optional: log switch to next proxy
+					console.warn(`Proxy ${proxy || 'direct'} exhausted. Switching to next proxy...`);
+				}
 			}
 		}
 	}
