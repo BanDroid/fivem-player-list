@@ -13,13 +13,7 @@ let currentPlayers;
 export const getPlayers = () => currentPlayers;
 
 async function retryFetch(url, options = {}) {
-	const {
-		proxyList = PROXIES,
-		retriesPerProxy = 1,
-		timeout = 3000,
-		backoff = 2,
-		retryOn = [429, 500, 502, 503, 504],
-	} = options;
+	const { proxyList = PROXIES, retriesPerProxy = 1, timeout = 3000, backoff = 2 } = options;
 
 	// If no proxy, fallback to direct request
 	const targets = proxyList.length ? proxyList : [null];
@@ -43,10 +37,6 @@ async function retryFetch(url, options = {}) {
 
 				if (response.ok) {
 					return response;
-				}
-
-				if (!retryOn.includes(response.status)) {
-					throw new Error(`Non-retryable status: ${response.status}`);
 				}
 
 				throw new Error(`Retryable status: ${response.status}`);
