@@ -38,8 +38,6 @@ export const PROXIES = [
 	'https://corsproxy.io/',
 	'https://cors-proxy.htmldriven.com/?url=',
 	'https://thingproxy.freeboard.io/fetch/',
-	'https://whateverorigin.org/get?url=',
-	'https://api.allorigins.win/get?url=',
 	'https://api.allorigins.win/raw?url=',
 	'https://test.cors.workers.dev/?',
 ];
